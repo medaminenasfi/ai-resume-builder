@@ -12,7 +12,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const class_transformer_1 = require("class-transformer");
+const role_enum_1 = require("../enums/role.enum");
+const status_enum_1 = require("../enums/status.enum");
 let User = class User {
+    updateTimestamp() {
+        this.updatedAt = new Date();
+    }
+    login(password) {
+        return true;
+    }
+    logout() {
+    }
+    resetPassword(token, password) {
+    }
+    getEntitlements() {
+        return [];
+    }
+    softDelete() {
+        this.deletedAt = new Date();
+    }
 };
 exports.User = User;
 __decorate([
@@ -27,13 +45,37 @@ __decorate([
     (0, typeorm_1.Column)(),
     (0, class_transformer_1.Exclude)(),
     __metadata("design:type", String)
-], User.prototype, "password", void 0);
+], User.prototype, "passwordHash", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: role_enum_1.RoleEnum,
+        default: role_enum_1.RoleEnum.USER,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "role", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: status_enum_1.StatusEnum,
+        default: status_enum_1.StatusEnum.PENDING,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "emailVerified", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "oauthProvider", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "firstName", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "lastName", void 0);
 __decorate([
@@ -41,21 +83,27 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "phone", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: true }),
-    __metadata("design:type", Boolean)
-], User.prototype, "isActive", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: 'user' }),
-    __metadata("design:type", String)
-], User.prototype, "role", void 0);
-__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], User.prototype, "createdAt", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "lastLoginAt", void 0);
+__decorate([
     (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], User.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.DeleteDateColumn)(),
+    __metadata("design:type", Date)
+], User.prototype, "deletedAt", void 0);
+__decorate([
+    (0, typeorm_1.BeforeUpdate)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], User.prototype, "updateTimestamp", null);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

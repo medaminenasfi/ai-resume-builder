@@ -2,30 +2,35 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../models/user.entity';
-import { CreateUserDto } from '../dto/create-user.dto';
-import * as bcrypt from 'bcryptjs';
+import { SignupDto } from '../../auth/dto/signup.dto';
+import { RoleEnum } from '../enums/role.enum';
+import { StatusEnum } from '../enums/status.enum';
+import { BcryptService } from '../../auth/services/bcrypt.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly bcryptService: BcryptService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(signupDto: SignupDto): Promise<User> {
     const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
+      where: { email: signupDto.email },
     });
 
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const hashedPassword = await this.bcryptService.hashPassword(signupDto.password);
 
     const user = this.userRepository.create({
-      ...createUserDto,
-      password: hashedPassword,
+      ...signupDto,
+      passwordHash: hashedPassword,
+      role: signupDto.role || RoleEnum.USER,
+      status: StatusEnum.PENDING, // Back to pending - status check removed from login
     });
 
     return this.userRepository.save(user);
@@ -45,22 +50,35 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'isActive', 'role', 'createdAt', 'updatedAt'],
+      where: { deletedAt: null },
+      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'role', 'status', 'emailVerified', 'oauthProvider', 'createdAt', 'lastLoginAt', 'updatedAt'],
     });
   }
 
-  async update(id: string, updateUserDto: Partial<CreateUserDto>): Promise<User> {
+  async update(id: string, updateUserDto: Partial<SignupDto>): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+      updateUserDto.password = await this.bcryptService.hashPassword(updateUserDto.password);
     }
 
     Object.assign(user, updateUserDto);
     return this.userRepository.save(user);
+  }
+
+  async updateLastLogin(id: string): Promise<void> {
+    await this.userRepository.update(id, { lastLoginAt: new Date() });
+  }
+
+  async softDelete(id: string): Promise<void> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.userRepository.softDelete(id);
   }
 
   async remove(id: string): Promise<void> {

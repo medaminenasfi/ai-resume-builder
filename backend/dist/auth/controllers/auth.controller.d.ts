@@ -1,28 +1,19 @@
+import { Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { LoginUserDto } from '../../users/dto/login-user.dto';
-import { CreateUserDto } from '../../users/dto/create-user.dto';
+import { LoginDto } from '../dto/login.dto';
+import { SignupDto } from '../dto/signup.dto';
+import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    login(loginUserDto: LoginUserDto): Promise<{
-        access_token: string;
-        user: {
-            id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-            role: string;
-        };
-    }>;
-    register(createUserDto: CreateUserDto): Promise<{
-        access_token: string;
-        user: {
-            id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-            role: string;
-        };
-    }>;
-    getProfile(req: any): any;
+    signup(signupDto: SignupDto, res: Response): Promise<void>;
+    login(loginDto: LoginDto, res: Response): Promise<void>;
+    refresh(refreshTokenDto: RefreshTokenDto, res: Response): Promise<void>;
+    logout(req: any, res: Response): Promise<void>;
+    forgotPassword(forgotPasswordDto: ForgotPasswordDto, res: Response): Promise<void>;
+    resetPassword(resetPasswordDto: ResetPasswordDto, res: Response): Promise<void>;
+    getProfile(req: any, res: Response): void;
+    getEntitlements(req: any, res: Response): Promise<void>;
 }

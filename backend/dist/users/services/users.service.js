@@ -17,22 +17,27 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../models/user.entity");
-const bcrypt = require("bcryptjs");
+const role_enum_1 = require("../enums/role.enum");
+const status_enum_1 = require("../enums/status.enum");
+const bcrypt_service_1 = require("../../auth/services/bcrypt.service");
 let UsersService = class UsersService {
-    constructor(userRepository) {
+    constructor(userRepository, bcryptService) {
         this.userRepository = userRepository;
+        this.bcryptService = bcryptService;
     }
-    async create(createUserDto) {
+    async create(signupDto) {
         const existingUser = await this.userRepository.findOne({
-            where: { email: createUserDto.email },
+            where: { email: signupDto.email },
         });
         if (existingUser) {
             throw new common_1.ConflictException('User with this email already exists');
         }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        const hashedPassword = await this.bcryptService.hashPassword(signupDto.password);
         const user = this.userRepository.create({
-            ...createUserDto,
-            password: hashedPassword,
+            ...signupDto,
+            passwordHash: hashedPassword,
+            role: signupDto.role || role_enum_1.RoleEnum.USER,
+            status: status_enum_1.StatusEnum.ACTIVE,
         });
         return this.userRepository.save(user);
     }
@@ -48,7 +53,8 @@ let UsersService = class UsersService {
     }
     async findAll() {
         return this.userRepository.find({
-            select: ['id', 'email', 'firstName', 'lastName', 'phone', 'isActive', 'role', 'createdAt', 'updatedAt'],
+            where: { deletedAt: null },
+            select: ['id', 'email', 'firstName', 'lastName', 'phone', 'role', 'status', 'emailVerified', 'oauthProvider', 'createdAt', 'lastLoginAt', 'updatedAt'],
         });
     }
     async update(id, updateUserDto) {
@@ -57,10 +63,20 @@ let UsersService = class UsersService {
             throw new common_1.NotFoundException('User not found');
         }
         if (updateUserDto.password) {
-            updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+            updateUserDto.password = await this.bcryptService.hashPassword(updateUserDto.password);
         }
         Object.assign(user, updateUserDto);
         return this.userRepository.save(user);
+    }
+    async updateLastLogin(id) {
+        await this.userRepository.update(id, { lastLoginAt: new Date() });
+    }
+    async softDelete(id) {
+        const user = await this.findById(id);
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        await this.userRepository.softDelete(id);
     }
     async remove(id) {
         const user = await this.findById(id);
@@ -74,6 +90,7 @@ exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        bcrypt_service_1.BcryptService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

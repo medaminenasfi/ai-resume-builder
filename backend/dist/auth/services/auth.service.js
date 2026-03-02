@@ -11,57 +11,134 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
-const jwt_1 = require("@nestjs/jwt");
 const users_service_1 = require("../../users/services/users.service");
-const bcrypt = require("bcryptjs");
+const jwt_service_1 = require("./jwt.service");
+const bcrypt_service_1 = require("./bcrypt.service");
 let AuthService = class AuthService {
-    constructor(usersService, jwtService) {
+    constructor(usersService, jwtService, bcryptService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
+        this.bcryptService = bcryptService;
+    }
+    async signup(signupDto) {
+        const user = await this.usersService.create(signupDto);
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role
+        };
+        return this.jwtService.generateTokenPair(payload);
+    }
+    async login(loginDto) {
+        const user = await this.validateUser(loginDto.email, loginDto.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Invalid email or password');
+        }
+        if (user.status !== 'active') {
+            throw new common_1.UnauthorizedException(`Account is ${user.status}. Please contact support or verify your email.`);
+        }
+        await this.usersService.updateLastLogin(user.id);
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role
+        };
+        return this.jwtService.generateTokenPair(payload);
+    }
+    async refresh(refreshTokenDto) {
+        try {
+            const payload = this.jwtService.verifyToken(refreshTokenDto.refreshToken);
+            const user = await this.usersService.findById(payload.sub);
+            if (!user) {
+                throw new common_1.UnauthorizedException('User not found');
+            }
+            const newPayload = {
+                sub: user.id,
+                email: user.email,
+                role: user.role
+            };
+            return this.jwtService.generateTokenPair(newPayload);
+        }
+        catch (error) {
+            throw new common_1.UnauthorizedException('Invalid refresh token');
+        }
+    }
+    async logout(userId) {
+        console.log(`User ${userId} logged out`);
+    }
+    async forgotPassword(forgotPasswordDto) {
+        const user = await this.usersService.findByEmail(forgotPasswordDto.email);
+        if (!user) {
+            return;
+        }
+        console.log(`Password reset requested for: ${user.email}`);
+    }
+    async resetPassword(resetPasswordDto) {
+        try {
+            const payload = this.jwtService.verifyToken(resetPasswordDto.token);
+            const user = await this.usersService.findById(payload.sub);
+            if (!user) {
+                throw new common_1.BadRequestException('Invalid reset token');
+            }
+            const hashedPassword = await this.bcryptService.hashPassword(resetPasswordDto.newPassword);
+            await this.usersService.update(user.id, { password: hashedPassword });
+        }
+        catch (error) {
+            throw new common_1.BadRequestException('Invalid or expired reset token');
+        }
     }
     async validateUser(email, password) {
         const user = await this.usersService.findByEmail(email);
-        if (user && await bcrypt.compare(password, user.password)) {
+        if (user && await this.bcryptService.comparePassword(password, user.passwordHash)) {
             return user;
         }
         return null;
     }
-    async login(loginUserDto) {
-        const user = await this.validateUser(loginUserDto.email, loginUserDto.password);
+    async getEntitlements(userId) {
+        const user = await this.usersService.findById(userId);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('User not found');
         }
-        const payload = { email: user.email, sub: user.id };
+        const permissions = this.getPermissionsByRole(user.role);
         return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role,
-            },
+            userId: user.id,
+            role: user.role,
+            permissions,
         };
     }
-    async register(createUserDto) {
-        const user = await this.usersService.create(createUserDto);
-        const payload = { email: user.email, sub: user.id };
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role,
-            },
-        };
+    getPermissionsByRole(role) {
+        switch (role) {
+            case 'admin':
+                return [
+                    { resource: 'users', actions: ['create', 'read', 'update', 'delete'] },
+                    { resource: 'content', actions: ['create', 'read', 'update', 'delete'] },
+                    { resource: 'settings', actions: ['read', 'update'] },
+                ];
+            case 'moderator':
+                return [
+                    { resource: 'users', actions: ['read', 'update'] },
+                    { resource: 'content', actions: ['create', 'read', 'update', 'delete'] },
+                ];
+            case 'user':
+            default:
+                return [
+                    { resource: 'profile', actions: ['read', 'update'] },
+                    { resource: 'content', actions: ['create', 'read'] },
+                ];
+        }
+    }
+    async hashPwd(password) {
+        return this.bcryptService.hashPassword(password);
+    }
+    async comparePwd(password, hash) {
+        return this.bcryptService.comparePassword(password, hash);
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
-        jwt_1.JwtService])
+        jwt_service_1.JwtService,
+        bcrypt_service_1.BcryptService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
