@@ -1,37 +1,40 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '../src/contexts/auth.context';
 import { ArrowRight, Sparkles, Zap, FileText, BarChart3, Wand2, Chrome, CheckCircle2, Users, Trophy, Rocket } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../src/components/ui/button';
+import { AppNav } from '../src/components/navigation/app-nav';
+import { ProtectedRoute } from '../src/components/auth/protected-route';
+import { Loader2 } from 'lucide-react';
 
-export default function Home() {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-card">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg text-foreground">ResumeAI</span>
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition">Features</Link>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition">Pricing</a>
-            <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition">Help</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/signup">Get Started</Link>
-            </Button>
+function HomeContent() {
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // If authenticated, redirect to dashboard
+  if (isAuthenticated) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Redirecting to dashboard...</p>
           </div>
         </div>
-      </nav>
+      </ProtectedRoute>
+    );
+  }
 
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-card">
       {/* Hero Section */}
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(80,60,200,0.1),rgba(80,60,200,0))]" />
@@ -57,7 +60,7 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="lg" asChild>
               <Link href="/login" className="gap-2">
-                Demo: demo@example.com
+                Sign In
               </Link>
             </Button>
           </div>
@@ -200,7 +203,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/login">Try Demo</Link>
+              <Link href="/login">Sign In</Link>
             </Button>
           </div>
         </div>
@@ -248,5 +251,14 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <>
+      <AppNav />
+      <HomeContent />
+    </>
   );
 }

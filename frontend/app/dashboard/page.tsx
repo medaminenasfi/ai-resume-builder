@@ -6,33 +6,22 @@ import Link from 'next/link';
 import { 
   Plus, FileText, Sparkles, LogOut, Bell, Settings, Search,
   MoreVertical, Edit, Download, Share2, Trash2, Eye, Copy,
-  BarChart3, Clock, Zap, Upload, Mail, Briefcase, Menu, X
+  BarChart3, Clock, Zap, Upload, Mail, Briefcase, Menu, X, User
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../../src/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../src/components/ui/card';
+import { Badge } from '../../src/components/ui/badge';
+import { useAuth } from '../../src/contexts/auth.context';
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, logout } = useAuth();
   const [showNewModal, setShowNewModal] = useState(false);
   const [activeSection, setActiveSection] = useState<'resumes' | 'letters'>('resumes');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      router.push('/login');
-      return;
-    }
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role === 'admin') {
-      router.push('/admin');
-      return;
-    }
-    setUser(parsedUser);
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await logout();
     router.push('/');
   };
 
@@ -141,6 +130,12 @@ export default function Dashboard() {
               </Link>
             </Button>
 
+            <Button variant="outline" size="icon" asChild title="Profile">
+              <Link href="/profile">
+                <User className="w-5 h-5" />
+              </Link>
+            </Button>
+
             <div className="flex items-center gap-3 pl-4 border-l border-border/40">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-foreground">{user?.email.split('@')[0]}</p>
@@ -232,7 +227,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           <div className="p-4 rounded-lg border border-border/40 bg-card/50 hover:bg-card/80 transition cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
               <Upload className="w-5 h-5 text-primary" />
@@ -253,9 +248,19 @@ export default function Dashboard() {
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
               <BarChart3 className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">View Analytics</h3>
-            <p className="text-sm text-muted-foreground">See how your resume performs</p>
+            <h3 className="font-semibold text-foreground mb-1">Analytics</h3>
+            <p className="text-sm text-muted-foreground">Track your resume performance</p>
           </div>
+          
+          <Link href="/profile" className="block">
+            <div className="p-4 rounded-lg border border-border/40 bg-card/50 hover:bg-card/80 transition cursor-pointer">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-1">My Profile</h3>
+              <p className="text-sm text-muted-foreground">View all info & change password</p>
+            </div>
+          </Link>
         </div>
 
           {/* Resumes Section */}

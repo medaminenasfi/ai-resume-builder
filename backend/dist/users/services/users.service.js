@@ -37,7 +37,7 @@ let UsersService = class UsersService {
             ...signupDto,
             passwordHash: hashedPassword,
             role: signupDto.role || role_enum_1.RoleEnum.USER,
-            status: status_enum_1.StatusEnum.ACTIVE,
+            status: status_enum_1.StatusEnum.PENDING,
         });
         return this.userRepository.save(user);
     }

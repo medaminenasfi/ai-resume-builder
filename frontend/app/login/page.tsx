@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Eye, EyeOff, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useAuth } from '../../src/contexts/auth.context';
+import { Button } from '../../src/components/ui/button';
+import { Input } from '../../src/components/ui/input';
+import { Label } from '../../src/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../src/components/ui/card';
+import { Alert, AlertDescription } from '../../src/components/ui/alert';
+import { Loader2, Eye, EyeOff, ArrowLeft, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react';
 
 const DEMO_ACCOUNTS = {
   user: { email: 'user@example.com', password: 'Demo@123456', role: 'user' },
@@ -19,30 +24,62 @@ export default function LoginPage() {
     password: '',
     rememberMe: false,
   });
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (error) setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      // Basic validation
+      if (!formData.email || !formData.password) {
+        setError('Please fill in all fields');
+        return;
+      }
+
+      if (!formData.email.includes('@')) {
+        setError('Please enter a valid email address');
+        return;
+      }
+
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        router.push('/dashboard');
+      } else {
+        setError(result.message);
+      }
+    } catch (error: any) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDemoLogin = (account: typeof DEMO_ACCOUNTS.user) => {
     setFormData({
       email: account.email,
       password: account.password,
-      rememberMe: true,
+      rememberMe: false,
     });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    setTimeout(() => {
-      const isAdmin = formData.email === DEMO_ACCOUNTS.admin.email;
-      localStorage.setItem('user', JSON.stringify({
-        email: formData.email,
-        name: formData.email.split('@')[0],
-        role: isAdmin ? 'admin' : 'user',
-      }));
-      
-      router.push(isAdmin ? '/admin' : '/dashboard');
-    }, 800);
   };
 
   return (
@@ -99,7 +136,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={handleChange}
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
                 required
               />
@@ -118,7 +155,7 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={handleChange}
                 className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
                 required
               />
@@ -135,9 +172,10 @@ export default function LoginPage() {
           {/* Remember Me */}
           <div className="flex items-center gap-2">
             <input
-              type="checkbox"
               id="rememberMe"
-              checked={formData.rememberMe}
+              name="rememberMe"
+              type="checkbox"
+              checked={false}
               onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
               className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
             />
@@ -149,11 +187,11 @@ export default function LoginPage() {
           {/* Submit Button */}
           <Button 
             type="submit" 
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full gap-2"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
-            {!loading && <ArrowRight className="w-4 h-4" />}
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
+            {!isSubmitting && <ArrowRight className="w-4 h-4" />}
           </Button>
         </form>
 

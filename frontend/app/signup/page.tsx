@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../../src/components/ui/button';
 
 export default function SignupPage() {
   const router = useRouter();

@@ -34,9 +34,6 @@ let AuthService = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid email or password');
         }
-        if (user.status !== 'active') {
-            throw new common_1.UnauthorizedException(`Account is ${user.status}. Please contact support or verify your email.`);
-        }
         await this.usersService.updateLastLogin(user.id);
         const payload = {
             sub: user.id,
